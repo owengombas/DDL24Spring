@@ -12,8 +12,7 @@ from centralized import HeartDiseaseNN as EvaluatorModel
 
 
 class Autoencoder(nn.Module):
-    def __init__(self, D_in, H=50, H2=12, latent_dim=3):
-
+    def __init__(self, D_in: int, H=50, H2=12, latent_dim=3):
         # Encoder
         super(Autoencoder, self).__init__()
         self.optimizer = None
@@ -80,10 +79,11 @@ class Autoencoder(nn.Module):
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
-    def train_with_settings(self, epochs, batch_sz, real_data, optimizer, loss_fn):
+    def train_with_settings(self, epochs, batch_sz, real_data, optimizer, loss_fn, log_interval=10) -> torch.Tensor:
         self.optimizer = optimizer
         self.criterion = loss_fn
         num_batches = len(real_data) // batch_sz if len(real_data) % batch_sz == 0 else len(real_data) // batch_sz + 1
+        losses: torch.Tensor = torch.zeros(epochs)
         for epoch in range(epochs):
             self.optimizer.zero_grad()
             total_loss = 0.0
@@ -99,8 +99,11 @@ class Autoencoder(nn.Module):
                 loss.backward()
                 self.optimizer.step()
 
-            print(
-                f"Epoch: {epoch} Loss: {total_loss.detach().numpy() / num_batches:.3f}")
+            losses[epoch] = total_loss / num_batches
+            if epoch % log_interval == 0:
+                print(f"Epoch: {epoch} Loss: {total_loss.detach().numpy() / num_batches:.3f}")
+                
+            return losses
 
     def sample(self, nr_samples, mu, logvar):
         sigma = torch.exp(logvar / 2)

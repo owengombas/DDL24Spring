@@ -4,8 +4,8 @@ from torchvision import datasets, transforms
 
 data_path_str = "./data"
 ETA = "\N{GREEK SMALL LETTER ETA}"
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("mps" if torch.cuda.is_available() else "cpu")
+device = torch.device("mps")
 torch.backends.cudnn.deterministic=True
 
 transform = transforms.Compose([
@@ -170,6 +170,7 @@ class Server(ABC):
 
         with torch.no_grad():
             for data, target in test_loader:
+                torch.mps.empty_cache()
                 data, target = data.to(device), target.to(device)
                 output = self.model(data)
                 pred = output.argmax(dim=1, keepdim=True)
@@ -200,6 +201,7 @@ class CentralizedServer(Server):
         run_result = RunResult("Centralized", 1, 1, self.batch_size, 1, self.lr, self.seed)
 
         for epoch in tqdm(range(nr_rounds), desc="Epochs", leave=False):
+            torch.mps.empty_cache()
             start_time = perf_counter()
             self.generator.manual_seed(self.seed + epoch + 1)
             train_epoch(self.model, self.loader_train, self.optimizer)
@@ -263,6 +265,7 @@ class FedSgdGradientServer(DecentralizedServer):
         run_result = RunResult("FedSGDGradient", self.nr_clients, self.client_fraction, -1, 1, self.lr, self.seed)
 
         for nr_round in tqdm(range(nr_rounds), desc="Rounds", leave=False):
+            torch.mps.empty_cache()
             setup_start_time = perf_counter()
             self.model.train()
             self.optimizer.zero_grad()
@@ -338,6 +341,7 @@ class FedAvgServer(DecentralizedServer):
         run_result = RunResult(self.name, self.nr_clients, self.client_fraction, self.batch_size, self.nr_local_epochs, self.lr, self.seed)
 
         for nr_round in tqdm(range(nr_rounds), desc="Rounds", leave=False):
+            torch.mps.empty_cache()
             setup_start_time = perf_counter()
             self.model.train()
             weights = [x.detach().cpu().clone() for x in self.model.parameters()]

@@ -1,4 +1,3 @@
-
 ## Objectives
 
 Your project accounts for 70% of your final grade.
